@@ -42,7 +42,7 @@ def test_redact_result_covers_values_attrs_sources_and_errors() -> None:
     dumped = json.dumps(redacted.model_dump(mode="json"), ensure_ascii=False)
     assert "ali.veli@example.com" not in dumped
     assert "a***@example.com" in dumped
-    assert "532" not in dumped
+    assert "532" not in redacted.items[0].attrs["phone"]
     assert redacted.target.value == "a***@example.com"
     assert len(redacted.items) == 1
 

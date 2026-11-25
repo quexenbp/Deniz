@@ -1,19 +1,23 @@
-# -*- mode: python ; coding: utf-8 -*-
 # SPDX-License-Identifier: GPL-3.0-or-later
+# ruff: noqa: F821
 """One-file PyInstaller build. Run from the repository root:
 
     pyinstaller --clean --noconfirm packaging/deniz.spec
 """
 
+from pathlib import Path
+
 from PyInstaller.utils.hooks import collect_submodules
+
+ROOT = Path(SPECPATH).parent
 
 hidden = collect_submodules("deniz.kit")
 
 a = Analysis(
     ["entry.py"],
-    pathex=[".."],
+    pathex=[str(ROOT)],
     binaries=[],
-    datas=[("../deniz/data", "deniz/data")],
+    datas=[(str(ROOT / "deniz" / "data"), "deniz/data")],
     hiddenimports=hidden,
     hookspath=[],
     runtime_hooks=[],
