@@ -1,0 +1,100 @@
+services:
+  deniz:
+    build: .
+    image: deniz:dev
+    command: ["version"]
+    environment:
+      DENIZ_HOME: /data
+      # DENIZ_CERTSPOTTER_TOKEN: ""
+      # DENIZ_SEARXNG_URL: "http://searxng:8080"
+      # DENIZ_WEBHOOK_URL: ""
+      # DENIZ_DB_URL: "postgresql://deniz:secret@postgres:5432/deniz"
+    volumes:
+      - deniz-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "deniz", "version"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+
+  api:
+    build: .
+    image: deniz:dev
+    profiles: ["serve"]
+    command: ["serve", "--host", "0.0.0.0", "--port", "8787"]
+    environment:
+      DENIZ_HOME: /data
+      DENIZ_API_TOKEN: "${DENIZ_API_TOKEN:-change-me}"
+      DENIZ_DB_URL: "postgresql://deniz:secret@postgres:5432/deniz"
+    volumes:
+      - deniz-data:/data
+    ports:
+      - "127.0.0.1:8787:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    build: .
+    image: deniz:dev
+    profiles: ["workers"]
+    # Scale with: docker compose --profile workers up --scale worker=2
+    command: ["monitor", "daemon", "--poll", "30"]
+    environment:
+      DENIZ_HOME: /data
+      DENIZ_DB_URL: "postgresql://deniz:secret@postgres:5432/deniz"
+    volumes:
+      - deniz-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    security_opt:
+      - no-new-privileges:true
+
+  searxng:
+    image: searxng/searxng:latest
+    profiles: ["search"]
+    environment:
+      BASE_URL: http://localhost:8080/
+      INSTANCE_NAME: deniz
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: deniz
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: deniz
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deniz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  deniz-data:
+  pg-data:

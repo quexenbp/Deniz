@@ -1,0 +1,5 @@
+# Copy to scope.toml and edit. Without this file, only the CLI target and
+# its subdomains are in scope.
+allow = ["example.com", "*.example.com"]
+deny = ["dev.example.com"]
+include_apex = true

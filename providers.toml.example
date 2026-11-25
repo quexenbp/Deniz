@@ -1,0 +1,26 @@
+# Copy to ~/.deniz/providers.toml and chmod 600.
+# Environment variables win: DENIZ_<PROVIDER>_<KEY>.
+
+# [certspotter]
+# token = "..."
+
+# [searxng]
+# url = "https://searx.example"
+# token = "..."
+
+# [github]
+# token = "..."
+
+# [reddit]
+# client_id = "..."
+# client_secret = "..."
+
+# [email]
+# token = "hunter.io API key"
+
+# [x]
+# token = "X API v2 bearer token"
+
+# [spotify]
+# client_id = "..."
+# client_secret = "..."

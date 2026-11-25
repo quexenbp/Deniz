@@ -1,0 +1,16 @@
+{
+  "name": "Deniz",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "python -m pip install -e '.[dev]' && pre-commit install",
+  "postStartCommand": "python -m pytest -q --no-header -x tests/test_models.py",
+  "customizations": {
+    "vscode": {
+      "extensions": ["charliermarsh.ruff", "ms-python.python", "ms-python.mypy-type-checker"],
+      "settings": {
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"]
+      }
+    }
+  },
+  "remoteUser": "vscode"
+}

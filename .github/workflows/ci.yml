@@ -1,0 +1,105 @@
+name: ci
+
+on:
+  push:
+    branches: ["master", "main", "v3"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, py: "3.11" }
+          - { os: ubuntu-latest, py: "3.12" }
+          - { os: ubuntu-latest, py: "3.13" }
+          - { os: windows-latest, py: "3.12" }
+          - { os: macos-latest, py: "3.12" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py }}
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Lint
+        run: python -m ruff check deniz/kit deniz/cli.py deniz/mcp.py tests
+      - name: Types
+        run: python -m mypy deniz/kit --follow-imports=skip
+      - name: Tests
+        run: python -m pytest -q --cov=deniz.kit --cov-report=term-missing --cov-fail-under=60
+      - name: Provider catalog is current
+        run: |
+          python scripts/providers_doc.py
+          git diff --exit-code docs/providers.md
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pip-audit . && python -m pip_audit
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target test -t deniz:test .
+
+  binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e . pyinstaller
+      - run: bash scripts/build-binary.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deniz-binary
+          path: dist/deniz
+
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q -m load tests/test_load.py
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: deniz
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev,postgres]"
+      - run: python -m pytest tests/test_postgres.py -q
+        env:
+          DENIZ_TEST_PG: postgresql://postgres:postgres@localhost:5432/deniz

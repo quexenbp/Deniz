@@ -1,0 +1,148 @@
+# Minimal single-namespace deployment. Replace the image and host values.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deniz
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: deniz-data
+  namespace: deniz
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deniz
+  namespace: deniz
+type: Opaque
+stringData:
+  # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+  DENIZ_API_TOKEN: "change-me"
+  DENIZ_DB_URL: "postgresql://deniz:change-me@postgres:5432/deniz"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deniz
+  namespace: deniz
+spec:
+  selector:
+    app: deniz-api
+  ports:
+    - port: 8787
+      targetPort: 8787
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deniz-api
+  namespace: deniz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deniz-api
+  template:
+    metadata:
+      labels:
+        app: deniz-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: api
+          image: ghcr.io/example/deniz:0.1
+          args: ["serve", "--host", "0.0.0.0", "--port", "8787"]
+          envFrom:
+            - secretRef:
+                name: deniz
+          env:
+            - name: DENIZ_HOME
+              value: /data
+          ports:
+            - containerPort: 8787
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8787
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: deniz-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deniz-worker
+  namespace: deniz
+spec:
+  # Postgres leases make replicas safe: a monitor is claimed once.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: deniz-worker
+  template:
+    metadata:
+      labels:
+        app: deniz-worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: worker
+          image: ghcr.io/example/deniz:0.1
+          args: ["monitor", "daemon", "--poll", "30"]
+          envFrom:
+            - secretRef:
+                name: deniz
+          env:
+            - name: DENIZ_HOME
+              value: /data
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: deniz-data
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: deniz-backup
+  namespace: deniz
+spec:
+  schedule: "15 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          containers:
+            - name: backup
+              image: ghcr.io/example/deniz:0.1
+              args: ["backup", "/data/backups/daily"]
+              envFrom:
+                - secretRef:
+                    name: deniz
+              env:
+                - name: DENIZ_HOME
+                  value: /data
+              volumeMounts:
+                - name: data
+                  mountPath: /data
