@@ -6,8 +6,8 @@ Send `Authorization: Bearer <token>` (or `?token=` for the dashboard).
 
 Tokens live in `DENIZ_API_TOKENS` (JSON) or `~/.deniz/tokens.toml` and carry
 a role: `viewer` (GET), `operator` (GET/POST) or `admin` (all, including
-DELETE). The legacy single token is admin. Missing tokens get `401`; a role
-that may not use the method gets `403`.
+DELETE). The single token is admin. Missing tokens get `401`; a role that may
+not use the method gets `403`.
 
 Browser origins are `*` by default. Restrict with `--cors-origin` or
 `DENIZ_CORS_ORIGINS` (comma separated); disallowed origins get no
