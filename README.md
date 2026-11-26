@@ -4,7 +4,7 @@
 
 Source: <https://github.com/quexenbp/Deniz>
 
-Deniz is an OSINT workbench for attack-surface, identity and document research. It is built on the Maryam OSINT infrastructure; the typed provider core, graph, cases and agent surfaces are its own.
+Deniz is an OSINT workbench for attack-surface, identity and document research. It is built around a typed provider core, a graph, cases and agent surfaces.
 
 Providers declare cost, auth, rate and response budget, and every observation keeps its source and confidence. A SQLite cache and per-host token buckets sit under them. Results land in a versioned JSON envelope (`deniz.result/1`) and a graph you can query, diff and monitor.
 
