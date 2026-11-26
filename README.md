@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/banner.png" alt="Deniz" width="100%">
+</p>
+
 # Deniz
 
 [![License: GPL-3.0+](https://img.shields.io/badge/License-GPLv3%2B-green.svg)](LICENSE)
